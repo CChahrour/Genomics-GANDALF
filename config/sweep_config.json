@@ -1,0 +1,13 @@
+{
+    "method": "bayes",
+    "metric": {"name": "valid_r2_score", "goal": "maximize"},
+    "early_terminate": {"type": "hyperband", "min_iter": 3},
+    "parameters": {
+        "batch_size": {"values": [32, 64, 128, 256, 512, 1024, 2048, 4096]},
+        "embedding_dropout": {"distribution": "uniform", "min": 0.0, "max": 0.3},
+        "gflu_dropout": {"distribution": "uniform", "min": 0.0, "max": 0.3},
+        "gflu_feature_init_sparsity": {"distribution": "uniform", "min": 0.0,"max": 0.5},
+        "gflu_stages": {"distribution": "int_uniform", "min": 1, "max": 10},
+        "max_epochs": {"distribution": "int_uniform", "min": 10, "max": 200}
+    }
+}

@@ -1,0 +1,8 @@
+.pt_tmp/
+data/
+models/
+results/
+wandb/
+.lr*
+models
+saved_models/
