@@ -43,8 +43,8 @@ def setup_logger(results_dir: str):
 
 
 @logger.catch
-def load_data(data_dir: str, region_name: str, target: str):
-    data = pd.read_parquet(f"{data_dir}/data_{region_name}/{region_name}.parquet")
+def load_data(data_dir: str, region_name: str, target: str, target_column: str):
+    data = pd.read_parquet(f"{data_dir}/{region_name}.parquet")
 
     for col in data.select_dtypes(include=["float64"]).columns:
         data[col] = data[col].astype("float32")
@@ -53,7 +53,7 @@ def load_data(data_dir: str, region_name: str, target: str):
     data[meth_cols] = data[meth_cols].fillna(-1)
 
     X_data = data[[col for col in data.columns if "SEM" in col and target not in col]]
-    y_data = data["SEM_CAT_1_MLL-N"]
+    y_data = data[target_column]
 
     dataset = pd.concat([X_data, y_data], axis=1)
 
@@ -64,7 +64,6 @@ def load_data(data_dir: str, region_name: str, target: str):
     return train_data, val_data, test_data
 
 
-@logger.catch
 @logger.catch
 def train(train_data, val_data, test_data, project, group, results_dir, device, target):
     with wandb.init(
@@ -81,7 +80,7 @@ def train(train_data, val_data, test_data, project, group, results_dir, device, 
             continuous_cols=[col for col in train_data.columns if target not in col],
             dataloader_kwargs={"persistent_workers": True},
             normalize_continuous_features=False,
-            num_workers=10,
+            num_workers=8,
             pin_memory=True,
             target=[col for col in train_data.columns if target in col],
             validation_split=0,
@@ -151,10 +150,23 @@ def main():
     parser.add_argument(
         "--region_name", type=str, default="promoters_1024bp", help="Region name."
     )
+    parser.add_argument(
+        "--target_column",
+        type=str,
+        default="SEM_CAT_1_MLL-N",
+        help="Target column name in the dataset.",
+    )
+    parser.add_argument(
+        "--project",
+        type=str,
+        default="SEM_MLL-N_TF",
+        help="WandB project name.",
+    )
+    
     args = parser.parse_args()
 
     model = "GANDALF_SEM"
-    project = "SEM_MLL-N_TF"
+    project = args.project
     task = "singlelabel_regression"
     start_time = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
     group = f"{model}_{args.region_name}_{args.target}_{task}"
@@ -185,7 +197,7 @@ def main():
     )
 
     train_data, val_data, test_data = load_data(
-        args.data_dir, args.region_name, args.target
+        args.data_dir, args.region_name, args.target, args.target_column
     )
 
     logger.info("🧹 Sweep")
@@ -232,7 +244,8 @@ def main():
         json.dump(config, f, indent=4)
 
     logger.info(f"Results saved in: {results_dir}")
-
+    logger.info("👋 Shutting down EC2 instance...")
+    os.system("sudo shutdown -h now")
 
 if __name__ == "__main__":
     main()
